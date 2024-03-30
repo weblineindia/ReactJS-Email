@@ -1,25 +1,25 @@
 @import url('https://use.fontawesome.com/releases/v5.0.8/css/all.css');
-._style__error-msg__3MxmM {
+._3MxmM {
     color: red;
   }
-  ._style__add-remove__AYaEf {
+  ._AYaEf {
     top: 0px;
     padding: 0 0 0 5px;
     position: absolute;
   }
   
-  ._style__add-remove__AYaEf span {
+  ._AYaEf span {
     padding: 0 0 0 5px;
     font-size: 12px;
     font-weight: normal;
     color: #2c3e50;
   }
-  ._style__list-view__2ZQmc {
+  ._2ZQmc {
     margin: auto;
     width: 80%;
     position: relative;
   }
-  ._style__form-control__2LI2p {
+  ._2LI2p {
     width: 50%;
     padding: 12px 20px;
     margin: 8px 0;

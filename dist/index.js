@@ -6,7 +6,14 @@ var React__default = _interopDefault(React);
 function _inheritsLoose(subClass, superClass) {
   subClass.prototype = Object.create(superClass.prototype);
   subClass.prototype.constructor = subClass;
-  subClass.__proto__ = superClass;
+  _setPrototypeOf(subClass, superClass);
+}
+function _setPrototypeOf(o, p) {
+  _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) {
+    o.__proto__ = p;
+    return o;
+  };
+  return _setPrototypeOf(o, p);
 }
 
 function createCommonjsModule(fn, module) {
@@ -341,12 +348,14 @@ var ReactPropTypesSecret = 'SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED';
 
 var ReactPropTypesSecret_1 = ReactPropTypesSecret;
 
+var has = Function.call.bind(Object.prototype.hasOwnProperty);
+
 var printWarning = function() {};
 
 if (process.env.NODE_ENV !== 'production') {
   var ReactPropTypesSecret$1 = ReactPropTypesSecret_1;
   var loggedTypeFailures = {};
-  var has = Function.call.bind(Object.prototype.hasOwnProperty);
+  var has$1 = has;
 
   printWarning = function(text) {
     var message = 'Warning: ' + text;
@@ -358,7 +367,7 @@ if (process.env.NODE_ENV !== 'production') {
       // This error was thrown as a convenience so that you can use this stack
       // to find the callsite that caused this warning to fire.
       throw new Error(message);
-    } catch (x) {}
+    } catch (x) { /**/ }
   };
 }
 
@@ -376,7 +385,7 @@ if (process.env.NODE_ENV !== 'production') {
 function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
   if (process.env.NODE_ENV !== 'production') {
     for (var typeSpecName in typeSpecs) {
-      if (has(typeSpecs, typeSpecName)) {
+      if (has$1(typeSpecs, typeSpecName)) {
         var error;
         // Prop type validation may throw. In case they do, we don't want to
         // fail the render phase where it didn't fail before. So we log it.
@@ -387,7 +396,8 @@ function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
           if (typeof typeSpecs[typeSpecName] !== 'function') {
             var err = Error(
               (componentName || 'React class') + ': ' + location + ' type `' + typeSpecName + '` is invalid; ' +
-              'it must be a function, usually from the `prop-types` package, but received `' + typeof typeSpecs[typeSpecName] + '`.'
+              'it must be a function, usually from the `prop-types` package, but received `' + typeof typeSpecs[typeSpecName] + '`.' +
+              'This often happens because of typos such as `PropTypes.function` instead of `PropTypes.func`.'
             );
             err.name = 'Invariant Violation';
             throw err;
@@ -435,7 +445,6 @@ checkPropTypes.resetWarningCache = function() {
 
 var checkPropTypes_1 = checkPropTypes;
 
-var has$1 = Function.call.bind(Object.prototype.hasOwnProperty);
 var printWarning$1 = function() {};
 
 if (process.env.NODE_ENV !== 'production') {
@@ -536,6 +545,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
   // Keep this list in sync with production version in `./factoryWithThrowingShims.js`.
   var ReactPropTypes = {
     array: createPrimitiveTypeChecker('array'),
+    bigint: createPrimitiveTypeChecker('bigint'),
     bool: createPrimitiveTypeChecker('boolean'),
     func: createPrimitiveTypeChecker('function'),
     number: createPrimitiveTypeChecker('number'),
@@ -581,8 +591,9 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
    * is prohibitively expensive if they are created too often, such as what
    * happens in oneOfType() for any type before the one that matched.
    */
-  function PropTypeError(message) {
+  function PropTypeError(message, data) {
     this.message = message;
+    this.data = data && typeof data === 'object' ? data: {};
     this.stack = '';
   }
   // Make `instanceof Error` still work for returned errors.
@@ -617,7 +628,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
           ) {
             printWarning$1(
               'You are manually calling a React.PropTypes validation ' +
-              'function for the `' + propFullName + '` prop on `' + componentName  + '`. This is deprecated ' +
+              'function for the `' + propFullName + '` prop on `' + componentName + '`. This is deprecated ' +
               'and will throw in the standalone `prop-types` package. ' +
               'You may be seeing this warning due to a third-party PropTypes ' +
               'library. See https://fb.me/react-warning-dont-call-proptypes ' + 'for details.'
@@ -656,7 +667,10 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
         // 'of type `object`'.
         var preciseType = getPreciseType(propValue);
 
-        return new PropTypeError('Invalid ' + location + ' `' + propFullName + '` of type ' + ('`' + preciseType + '` supplied to `' + componentName + '`, expected ') + ('`' + expectedType + '`.'));
+        return new PropTypeError(
+          'Invalid ' + location + ' `' + propFullName + '` of type ' + ('`' + preciseType + '` supplied to `' + componentName + '`, expected ') + ('`' + expectedType + '`.'),
+          {expectedType: expectedType}
+        );
       }
       return null;
     }
@@ -770,7 +784,7 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
         return new PropTypeError('Invalid ' + location + ' `' + propFullName + '` of type ' + ('`' + propType + '` supplied to `' + componentName + '`, expected an object.'));
       }
       for (var key in propValue) {
-        if (has$1(propValue, key)) {
+        if (has(propValue, key)) {
           var error = typeChecker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret_1);
           if (error instanceof Error) {
             return error;
@@ -800,14 +814,19 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
     }
 
     function validate(props, propName, componentName, location, propFullName) {
+      var expectedTypes = [];
       for (var i = 0; i < arrayOfTypeCheckers.length; i++) {
         var checker = arrayOfTypeCheckers[i];
-        if (checker(props, propName, componentName, location, propFullName, ReactPropTypesSecret_1) == null) {
+        var checkerResult = checker(props, propName, componentName, location, propFullName, ReactPropTypesSecret_1);
+        if (checkerResult == null) {
           return null;
         }
+        if (checkerResult.data && has(checkerResult.data, 'expectedType')) {
+          expectedTypes.push(checkerResult.data.expectedType);
+        }
       }
-
-      return new PropTypeError('Invalid ' + location + ' `' + propFullName + '` supplied to ' + ('`' + componentName + '`.'));
+      var expectedTypesMessage = (expectedTypes.length > 0) ? ', expected one of type [' + expectedTypes.join(', ') + ']': '';
+      return new PropTypeError('Invalid ' + location + ' `' + propFullName + '` supplied to ' + ('`' + componentName + '`' + expectedTypesMessage + '.'));
     }
     return createChainableTypeChecker(validate);
   }
@@ -822,6 +841,13 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
     return createChainableTypeChecker(validate);
   }
 
+  function invalidValidatorError(componentName, location, propFullName, key, type) {
+    return new PropTypeError(
+      (componentName || 'React class') + ': ' + location + ' type `' + propFullName + '.' + key + '` is invalid; ' +
+      'it must be a function, usually from the `prop-types` package, but received `' + type + '`.'
+    );
+  }
+
   function createShapeTypeChecker(shapeTypes) {
     function validate(props, propName, componentName, location, propFullName) {
       var propValue = props[propName];
@@ -831,8 +857,8 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
       }
       for (var key in shapeTypes) {
         var checker = shapeTypes[key];
-        if (!checker) {
-          continue;
+        if (typeof checker !== 'function') {
+          return invalidValidatorError(componentName, location, propFullName, key, getPreciseType(checker));
         }
         var error = checker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret_1);
         if (error) {
@@ -851,16 +877,18 @@ var factoryWithTypeCheckers = function(isValidElement, throwOnDirectAccess) {
       if (propType !== 'object') {
         return new PropTypeError('Invalid ' + location + ' `' + propFullName + '` of type `' + propType + '` ' + ('supplied to `' + componentName + '`, expected `object`.'));
       }
-      // We need to check all keys in case some are required but missing from
-      // props.
+      // We need to check all keys in case some are required but missing from props.
       var allKeys = objectAssign({}, props[propName], shapeTypes);
       for (var key in allKeys) {
         var checker = shapeTypes[key];
+        if (has(shapeTypes, key) && typeof checker !== 'function') {
+          return invalidValidatorError(componentName, location, propFullName, key, getPreciseType(checker));
+        }
         if (!checker) {
           return new PropTypeError(
             'Invalid ' + location + ' `' + propFullName + '` key `' + key + '` supplied to `' + componentName + '`.' +
             '\nBad object: ' + JSON.stringify(props[propName], null, '  ') +
-            '\nValid keys: ' +  JSON.stringify(Object.keys(shapeTypes), null, '  ')
+            '\nValid keys: ' + JSON.stringify(Object.keys(shapeTypes), null, '  ')
           );
         }
         var error = checker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret_1);
@@ -1036,6 +1064,7 @@ var factoryWithThrowingShims = function() {
   // Keep this list in sync with production version in `./factoryWithTypeCheckers.js`.
   var ReactPropTypes = {
     array: shim,
+    bigint: shim,
     bool: shim,
     func: shim,
     number: shim,
@@ -1064,7 +1093,7 @@ var factoryWithThrowingShims = function() {
   return ReactPropTypes;
 };
 
-var propTypes$1 = createCommonjsModule(function (module) {
+var propTypes = createCommonjsModule(function (module) {
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -1089,11 +1118,8 @@ if (process.env.NODE_ENV !== 'production') {
 var EMAIL_REGEX = /[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
 
 var Email = /*#__PURE__*/function (_Component) {
-  _inheritsLoose(Email, _Component);
-
   function Email(props) {
     var _this;
-
     _this = _Component.call(this, props) || this;
     _this.state = {
       isError: false,
@@ -1102,29 +1128,24 @@ var Email = /*#__PURE__*/function (_Component) {
     };
     return _this;
   }
-
+  _inheritsLoose(Email, _Component);
   var _proto = Email.prototype;
-
   _proto.handleInput = function handleInput(event) {
     this.props.onChange(event, this.props.index);
     this.setState({
       isInvalidEmail: false
     });
   };
-
   _proto.handleFocus = function handleFocus(event) {
     if (this.props.onFocus) {
       this.props.onFocus(event);
     }
   };
-
   _proto.handleBlur = function handleBlur(event) {
     if (this.props.onBlur()) {
       this.props.onBlur(event);
     }
-
     var regex = this.props.regex;
-
     if (regex.test(event.target.value)) {
       this.setState({
         isInvalidEmail: false
@@ -1136,15 +1157,12 @@ var Email = /*#__PURE__*/function (_Component) {
         });
       }
     }
-
     event.preventDefault();
     event.stopPropagation();
     this.checkDupllicateEmails();
   };
-
   _proto.checkDupllicateEmails = function checkDupllicateEmails() {
     var tempArray = [];
-
     if (this.props.value.length > 1) {
       for (var i = 0; i <= this.props.value.length - 1; i++) {
         if (i !== this.props.index) {
@@ -1154,7 +1172,6 @@ var Email = /*#__PURE__*/function (_Component) {
         }
       }
     }
-
     if (tempArray.length > 0) {
       this.setState({
         isDuplicateEmail: true
@@ -1165,29 +1182,24 @@ var Email = /*#__PURE__*/function (_Component) {
       });
     }
   };
-
   _proto.handleKeyDown = function handleKeyDown(event) {
     if (this.props.onKeyDown()) {
       this.props.onKeyDown(event);
     }
   };
-
   _proto.handleKeyUp = function handleKeyUp(event) {
     if (this.props.onKeyUp()) {
       this.props.onKeyUp(event);
     }
   };
-
   _proto.handleKeyPress = function handleKeyPress(event) {
     if (this.props.onKeyPress()) {
       this.props.onKeyPress(event);
     }
   };
-
   _proto.onMultipleAdd = function onMultipleAdd() {
     this.props.onMultipleEmail();
   };
-
   _proto.render = function render() {
     return /*#__PURE__*/React__default.createElement("div", null, /*#__PURE__*/React__default.createElement("input", {
       id: this.props.id,
@@ -1222,35 +1234,30 @@ var Email = /*#__PURE__*/function (_Component) {
       className: "error-msg"
     }, this.props.duplicateEmailError) : "");
   };
-
   return Email;
 }(React.Component);
-
 Email.propTypes = {
-  onChange: propTypes$1.func,
-  onFocus: propTypes$1.func,
-  onBlur: propTypes$1.func,
-  onKeyDown: propTypes$1.func,
-  onKeyPress: propTypes$1.func,
-  onKeyUp: propTypes.func,
-  value: propTypes$1.array,
-  placeholder: propTypes$1.string,
-  id: propTypes$1.string,
-  name: propTypes$1.string,
-  tabIndex: propTypes$1.number,
-  hide: propTypes$1.bool,
-  disabled: propTypes$1.bool,
-  type: propTypes$1.string,
-  maxLength: propTypes$1.number,
-  autoComplete: propTypes$1.string,
-  className: propTypes$1.object,
-  regex: propTypes$1.any,
-  emailFormateError: propTypes$1.string,
-  duplicateEmailError: propTypes$1.string,
-  isMultiple: propTypes$1.bool,
-  isShowPlus: propTypes$1.bool,
-  onMultipleEmail: propTypes$1.func,
-  index: propTypes$1.number
+  onChange: propTypes.func,
+  onFocus: propTypes.func,
+  onBlur: propTypes.func,
+  value: propTypes.array,
+  placeholder: propTypes.string,
+  id: propTypes.string,
+  name: propTypes.string,
+  tabIndex: propTypes.number,
+  hide: propTypes.bool,
+  disabled: propTypes.bool,
+  type: propTypes.string,
+  maxLength: propTypes.number,
+  autoComplete: propTypes.string,
+  className: propTypes.object,
+  regex: propTypes.any,
+  emailFormateError: propTypes.string,
+  duplicateEmailError: propTypes.string,
+  isMultiple: propTypes.bool,
+  isShowPlus: propTypes.bool,
+  onMultipleEmail: propTypes.func,
+  index: propTypes.number
 };
 Email.defaultProps = {
   onFocus: function onFocus() {},

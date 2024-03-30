@@ -56,7 +56,6 @@ constructor(props) {
         });
     }
     onChange(event, index) {
-        debugger;
         let value = this.state.emailValue;
         value[index].email = event.target.value;
         this.setState({
